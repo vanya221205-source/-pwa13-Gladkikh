@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e3a8a" />
+  <title>Өтінімдер тізілімі / Реестр заявок</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #1e3a8a;
+      --primary-hover: #1d4ed8;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --pending: #fef3c7;
+      --pending-text: #92400e;
+      --approved: #dcfce7;
+      --approved-text: #166534;
+      --rejected: #fee2e2;
+      --rejected-text: #991b1b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 1.35rem;
+      margin: 0;
+      color: var(--primary);
+    }
+    .lang-switch {
+      display: flex;
+      gap: 6px;
+    }
+    .lang-btn {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .lang-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 16px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    input, select {
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    button.submit-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.submit-btn:hover {
+      background: var(--primary-hover);
+    }
+    .error-msg {
+      color: #b91c1c;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .request-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .request-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .req-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .req-title {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .req-meta {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .req-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .status-pending { background: var(--pending); color: var(--pending-text); }
+    .status-approved { background: var(--approved); color: var(--approved-text); }
+    .status-rejected { background: var(--rejected); color: var(--rejected-text); }
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 20px 0;
+    }
+    @media (max-width: 540px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 id="appTitle">Өтінімдер тізілімі</h1>
+      <div class="lang-switch">
+        <button type="button" class="lang-btn active" id="btnKk">ҚАЗ</button>
+        <button type="button" class="lang-btn" id="btnRu">РУС</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <form id="requestForm" novalidate>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="reqTitle" id="lblTitle">Өтінім атауы</label>
+            <input type="text" id="reqTitle" maxlength="100" required />
+          </div>
+          <div class="form-group">
+            <label for="reqAmount" id="lblAmount">Сомасы (₸)</label>
+            <input type="number" id="reqAmount" min="1" step="any" required />
+          </div>
+          <div class="form-group">
+            <label for="reqDept" id="lblDept">Бөлім / Санат</label>
+            <input type="text" id="reqDept" maxlength="60" required />
+          </div>
+          <div class="form-group full">
+            <label for="reqStatus" id="lblStatus">Бастапқы мәртебесі</label>
+            <select id="reqStatus">
+              <option value="pending">Қаралуда</option>
+              <option value="approved">Мақұлданды</option>
+              <option value="rejected">Қабылданбады</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="submit-btn" id="btnSubmit">Өтінімді тіркеу</button>
+        <div class="error-msg" id="errorMsg" role="alert"></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="summary">
+        <span id="countText">Барлығы: 0</span>
+        <span id="sumText">Жалпы сома: 0 ₸</span>
+      </div>
+      <div class="request-list" id="requestList"></div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "econ_requests_v1";
+    const LANG_KEY = "econ_requests_lang";
+
+    const i18n = {
+      kk: {
+        appTitle: "Өтінімдер тізілімі",
+        lblTitle: "Өтінім атауы",
+        phTitle: "Мысалы: Кеңсе жабдықтарын сатып алу",
+        lblAmount: "Сомасы (₸)",
+        phAmount: "150000",
+        lblDept: "Бөлім / Санат",
+        phDept: "Қаржы бөлімі",
+        lblStatus: "Бастапқы мәртебесі",
+        btnSubmit: "Өтінімді тіркеу",
+        statusPending: "Қаралуда",
+        statusApproved: "Мақұлданды",
+        statusRejected: "Қабылданбады",
+        empty: "Тіркелген өтінімдер әлі жоқ.",
+        countLabel: "Барлығы: ",
+        sumLabel: "Жалпы сома: ",
+        errEmpty: "Барлық өрістерді толтырыңыз.",
+        errAmount: "Сома 0-ден үлкен дұрыс сан болуы керек."
+      },
+      ru: {
+        appTitle: "Реестр заявок",
+        lblTitle: "Название заявки",
+        phTitle: "Например: Закупка офисной техники",
+        lblAmount: "Сумма (₸)",
+        phAmount: "150000",
+        lblDept: "Отдел / Категория",
+        phDept: "Финансовый отдел",
+        lblStatus: "Начальный статус",
+        btnSubmit: "Зарегистрировать заявку",
+        statusPending: "На проверке",
+        statusApproved: "Одобрена",
+        statusRejected: "Отклонена",
+        empty: "Зарегистрированных заявок пока нет.",
+        countLabel: "Всего: ",
+        sumLabel: "Общая сумма: ",
+        errEmpty: "Заполните все обязательные поля.",
+        errAmount: "Сумма должна быть корректным числом больше 0."
+      }
+    };
+
+    let currentLang = localStorage.getItem(LANG_KEY) === "ru" ? "ru" : "kk";
+    let requests = loadRequests();
+
+    function loadRequests() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveRequests() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem(LANG_KEY, lang);
+      document.documentElement.lang = lang;
+
+      const t = i18n[lang];
+      document.getElementById("appTitle").textContent = t.appTitle;
+      document.getElementById("lblTitle").textContent = t.lblTitle;
+      document.getElementById("reqTitle").placeholder = t.phTitle;
+      document.getElementById("lblAmount").textContent = t.lblAmount;
+      document.getElementById("reqAmount").placeholder = t.phAmount;
+      document.getElementById("lblDept").textContent = t.lblDept;
+      document.getElementById("reqDept").placeholder = t.phDept;
+      document.getElementById("lblStatus").textContent = t.lblStatus;
+      document.getElementById("btnSubmit").textContent = t.btnSubmit;
+
+      const statusSelect = document.getElementById("reqStatus");
+      statusSelect.options[0].textContent = t.statusPending;
+      statusSelect.options[1].textContent = t.statusApproved;
+      statusSelect.options[2].textContent = t.statusRejected;
+
+      document.getElementById("btnKk").classList.toggle("active", lang === "kk");
+      document.getElementById("btnRu").classList.toggle("active", lang === "ru");
+      document.getElementById("errorMsg").textContent = "";
+      renderList();
+    }
+
+    function getStatusLabel(status) {
+      const t = i18n[currentLang];
+      if (status === "approved") return t.statusApproved;
+      if (status === "rejected") return t.statusRejected;
+      return t.statusPending;
+    }
+
+    function renderList() {
+      const listEl = document.getElementById("requestList");
+      const t = i18n[currentLang];
+      listEl.textContent = "";
+
+      const totalSum = requests.reduce((acc, item) => acc + Number(item.amount || 0), 0);
+      document.getElementById("countText").textContent = t.countLabel + requests.length;
+      document.getElementById("sumText").textContent = t.sumLabel + totalSum.toLocaleString() + " ₸";
+
+      if (requests.length === 0) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.className = "empty-state";
+        emptyDiv.textContent = t.empty;
+        listEl.appendChild(emptyDiv);
+        return;
+      }
+
+      requests.forEach((req) => {
+        const item = document.createElement("div");
+        item.className = "request-item";
+
+        const info = document.createElement("div");
+        info.className = "req-info";
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "req-title";
+        titleEl.textContent = req.title;
+
+        const metaEl = document.createElement("div");
+        metaEl.className = "req-meta";
+        metaEl.textContent = `${req.dept} • ${Number(req.amount).toLocaleString()} ₸ • ${req.date}`;
+
+        info.appendChild(titleEl);
+        info.appendChild(metaEl);
+
+        const controls = document.createElement("div");
+        controls.className = "req-controls";
+
+        const badge = document.createElement("span");
+        badge.className = `badge status-${req.status}`;
+        badge.textContent = getStatusLabel(req.status);
+
+        const select = document.createElement("select");
+        [
+          { val: "pending", label: t.statusPending },
+          { val: "approved", label: t.statusApproved },
+          { val: "rejected", label: t.statusRejected }
+        ].forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt.val;
+          option.textContent = opt.label;
+          if (req.status === opt.val) option.selected = true;
+          select.appendChild(option);
+        });
+
+        select.addEventListener("change", (e) => {
+          req.status = e.target.value;
+          saveRequests();
+          renderList();
+        });
+
+        controls.appendChild(badge);
+        controls.appendChild(select);
+
+        item.appendChild(info);
+        item.appendChild(controls);
+        listEl.appendChild(item);
+      });
+    }
+
+    document.getElementById("requestForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const t = i18n[currentLang];
+      const errorEl = document.getElementById("errorMsg");
+
+      const title = document.getElementById("reqTitle").value.trim();
+      const amountRaw = document.getElementById("reqAmount").value.trim();
+      const dept = document.getElementById("reqDept").value.trim();
+      const status = document.getElementById("reqStatus").value;
+
+      if (!title || !dept || !amountRaw) {
+        errorEl.textContent = t.errEmpty;
+        return;
+      }
+
+      const amount = Number(amountRaw);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        errorEl.textContent = t.errAmount;
+        return;
+      }
+
+      errorEl.textContent = "";
+      const now = new Date().toLocaleDateString(currentLang === "kk" ? "kk-KZ" : "ru-RU");
+
+      requests.unshift({
+        id: Date.now().toString(),
+        title,
+        amount,
+        dept,
+        status,
+        date: now
+      });
+
+      saveRequests();
+      e.target.reset();
+      renderList();
+    });
+
+    document.getElementById("btnKk").addEventListener("click", () => setLanguage("kk"));
+    document.getElementById("btnRu").addEventListener("click", () => setLanguage("ru"));
+
+    setLanguage(currentLang);
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js");
+      });
+    }
+  </script>
+</body>
+</html>
